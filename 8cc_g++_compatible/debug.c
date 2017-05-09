@@ -3,7 +3,7 @@
 #include "8cc.h"
 
 static char *decorate_int(char *name, Type *ty) {
-    char *u = (ty->usig) ? "u" : "";
+    const char *u = (ty->usig) ? "u" : "";
     if (ty->bitsize > 0)
         return format("%s%s:%d:%d", u, name, ty->bitoff, ty->bitoff + ty->bitsize);
     return format("%s%s", u, name);
@@ -28,7 +28,7 @@ static char *do_ty2s(Dict *dict, Type *ty) {
     case KIND_ARRAY:
         return format("[%d]%s", ty->len, do_ty2s(dict, ty->ptr));
     case KIND_STRUCT: {
-        char *kind = ty->is_struct ? "struct" : "union";
+        const char *kind = ty->is_struct ? "struct" : "union";
         if (dict_get(dict, format("%p", ty)))
             return format("(%s)", kind);
         dict_put(dict, format("%p", ty), (void *)1);
@@ -37,8 +37,8 @@ static char *do_ty2s(Dict *dict, Type *ty) {
             buf_printf(b, "(%s", kind);
             Vector *keys = dict_keys(ty->fields);
             for (int i = 0; i < vec_len(keys); i++) {
-                char *key = vec_get(keys, i);
-                Type *fieldtype = dict_get(ty->fields, key);
+                char *key = (char *)vec_get(keys, i);
+                Type *fieldtype = (Type *)dict_get(ty->fields, key);
                 buf_printf(b, " (%s)", do_ty2s(dict, fieldtype));
             }
             buf_printf(b, ")");
@@ -52,7 +52,7 @@ static char *do_ty2s(Dict *dict, Type *ty) {
             for (int i = 0; i < vec_len(ty->params); i++) {
                 if (i > 0)
                     buf_printf(b, ",");
-                Type *t = vec_get(ty->params, i);
+                Type *t = (Type *)vec_get(ty->params, i);
                 buf_printf(b, "%s", do_ty2s(dict, t));
             }
         }
@@ -80,7 +80,7 @@ static void a2s_declinit(Buffer *b, Vector *initlist) {
     for (int i = 0; i < vec_len(initlist); i++) {
         if (i > 0)
             buf_printf(b, " ");
-        Node *init = vec_get(initlist, i);
+        Node *init = (Node *)vec_get(initlist, i);
         buf_printf(b, "%s", node2s(init));
     }
 }
@@ -141,7 +141,7 @@ static void do_node2s(Buffer *b, Node *node) {
         for (int i = 0; i < vec_len(node->args); i++) {
             if (i > 0)
                 buf_printf(b, ",");
-            buf_printf(b, "%s", node2s(vec_get(node->args, i)));
+            buf_printf(b, "%s", node2s((Node *)vec_get(node->args, i)));
         }
         buf_printf(b, ")");
         break;
@@ -155,7 +155,7 @@ static void do_node2s(Buffer *b, Node *node) {
         for (int i = 0; i < vec_len(node->params); i++) {
             if (i > 0)
                 buf_printf(b, ",");
-            Node *param = vec_get(node->params, i);
+            Node *param = (Node *)vec_get(node->params, i);
             buf_printf(b, "%s %s", ty2s(param->ty), node2s(param));
         }
         buf_printf(b, ")");
@@ -201,7 +201,7 @@ static void do_node2s(Buffer *b, Node *node) {
     case AST_COMPOUND_STMT: {
         buf_printf(b, "{");
         for (int i = 0; i < vec_len(node->stmts); i++) {
-            do_node2s(b, vec_get(node->stmts, i));
+            do_node2s(b, (Node *)vec_get(node->stmts, i));
             buf_printf(b, ";");
         }
         buf_printf(b, "}");

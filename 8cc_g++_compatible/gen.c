@@ -15,13 +15,16 @@ static char *REGS[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 static char *SREGS[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
 static char *MREGS[] = {"edi", "esi", "edx", "ecx", "r8d", "r9d"};
 static int TAB = 8;
-static Vector *functions = &EMPTY_VECTOR;
+//static Vector *functions = &EMPTY_VECTOR;
+EMPTY_OBJECT(Vector, g_functions, functions);
 static int stackpos;
 static int numgp;
 static int numfp;
 static FILE *outputfp;
-static Map *source_files = &EMPTY_MAP;
-static Map *source_lines = &EMPTY_MAP;
+//static Map *source_files = &EMPTY_MAP;
+EMPTY_OBJECT(Map, g_source_files, source_files);
+//static Map *source_lines = &EMPTY_MAP;
+EMPTY_OBJECT(Map, g_source_lines, source_lines);
 static char *last_loc = "";
 
 static void emit_addr(Node *node);
@@ -71,7 +74,7 @@ void close_output_file() {
 static void emitf(int line, char *fmt, ...) {
     // Replace "#" with "%%" so that vfprintf prints out "#" as "%".
     char buf[256];
-    int i = 0;
+    size_t i = 0;
     for (char *p = fmt; *p; p++) {
         assert(i < sizeof(buf) - 3);
         if (*p == '#') {
@@ -111,10 +114,10 @@ static void emit_nostack(char *fmt, ...) {
 static char *get_int_reg(Type *ty, char r) {
     assert(r == 'a' || r == 'c');
     switch (ty->size) {
-    case 1: return (r == 'a') ? "al" : "cl";
-    case 2: return (r == 'a') ? "ax" : "cx";
-    case 4: return (r == 'a') ? "eax" : "ecx";
-    case 8: return (r == 'a') ? "rax" : "rcx";
+    case 1: return (char *)((r == 'a') ? "al" : "cl");
+    case 2: return (char *)((r == 'a') ? "ax" : "cx");
+    case 4: return (char *)((r == 'a') ? "eax" : "ecx");
+    case 8: return (char *)((r == 'a') ? "rax" : "rcx");
     default:
         error("Unknown data size: %s: %d", ty2s(ty), ty->size);
     }
@@ -499,7 +502,7 @@ static void emit_binop_int_arith(Node *node) {
 
 static void emit_binop_float_arith(Node *node) {
     SAVE;
-    char *op;
+    const char *op;
     bool isdouble = (node->ty->kind == KIND_DOUBLE);
     switch (node->kind) {
     case '+': op = (isdouble ? "addsd" : "addss"); break;
@@ -646,9 +649,9 @@ static void emit_fill_holes(Vector *inits, int off, int totalsize) {
     // If at least one of the fields in a variable are initialized,
     // unspecified fields has to be initialized with 0.
     int len = vec_len(inits);
-    Node **buf = malloc(len * sizeof(Node *));
+    Node **buf = (Node **)malloc(len * sizeof(Node *));
     for (int i = 0; i < len; i++)
-        buf[i] = vec_get(inits, i);
+        buf[i] = (Node *)vec_get(inits, i);
     qsort(buf, len, sizeof(Node *), cmpinit);
 
     int lastend = 0;
@@ -664,7 +667,7 @@ static void emit_fill_holes(Vector *inits, int off, int totalsize) {
 static void emit_decl_init(Vector *inits, int off, int totalsize) {
     emit_fill_holes(inits, off, totalsize);
     for (int i = 0; i < vec_len(inits); i++) {
-        Node *node = vec_get(inits, i);
+        Node *node = (Node *)vec_get(inits, i);
         assert(node->kind == AST_INIT);
         bool isbitfield = (node->totype->bitsize > 0);
         if (node->initval->kind == AST_LITERAL && !isbitfield) {
@@ -694,7 +697,7 @@ static void emit_post_inc_dec(Node *node, char *op) {
 static void set_reg_nums(Vector *args) {
     numgp = numfp = 0;
     for (int i = 0; i < vec_len(args); i++) {
-        Node *arg = vec_get(args, i);
+        Node *arg = (Node *)vec_get(args, i);
         if (is_flotype(arg->ty))
             numfp++;
         else
@@ -785,7 +788,7 @@ static char **split(char *buf) {
         p++;
     }
     p = buf;
-    char **r = malloc(sizeof(char *) * len + 1);
+    char **r = (char **)malloc(sizeof(char *) * len + 1);
     int i = 0;
     while (*p) {
         if (p[0] == '\r' && p[1] == '\n') {
@@ -810,7 +813,7 @@ static char **read_source_file(char *file) {
         return NULL;
     struct stat st;
     fstat(fileno(fp), &st);
-    char *buf = malloc(st.st_size + 1);
+    char *buf = (char *)malloc(st.st_size + 1);
     if (fread(buf, 1, st.st_size, fp) != st.st_size) {
         fclose(fp);
         return NULL;
@@ -823,7 +826,7 @@ static char **read_source_file(char *file) {
 static void maybe_print_source_line(char *file, int line) {
     if (!dumpsource)
         return;
-    char **lines = map_get(source_lines, file);
+    char **lines = (char **)map_get(source_lines, file);
     if (!lines) {
         lines = read_source_file(file);
         if (!lines)
@@ -868,7 +871,7 @@ static void emit_gvar(Node *node) {
 static void emit_builtin_return_address(Node *node) {
     push("r11");
     assert(vec_len(node->args) == 1);
-    emit_expr(vec_head(node->args));
+    emit_expr((Node *)vec_head(node->args));
     char *loop = make_label();
     char *end = make_label();
     emit("mov #rbp, #r11");
@@ -886,7 +889,7 @@ static void emit_builtin_return_address(Node *node) {
 // Set the register class for parameter passing to RAX.
 // 0 is INTEGER, 1 is SSE, 2 is MEMORY.
 static void emit_builtin_reg_class(Node *node) {
-    Node *arg = vec_get(node->args, 0);
+    Node *arg = (Node *)vec_get(node->args, 0);
     assert(arg->ty->kind == KIND_PTR);
     Type *ty = arg->ty->ptr;
     if (ty->kind == KIND_STRUCT)
@@ -900,7 +903,7 @@ static void emit_builtin_reg_class(Node *node) {
 static void emit_builtin_va_start(Node *node) {
     SAVE;
     assert(vec_len(node->args) == 1);
-    emit_expr(vec_head(node->args));
+    emit_expr((Node *)vec_head(node->args));
     push("rcx");
     emit("movl $%d, (#rax)", numgp * 8);
     emit("movl $%d, 4(#rax)", 48 + numfp * 16);
@@ -931,7 +934,7 @@ static void classify_args(Vector *ints, Vector *floats, Vector *rest, Vector *ar
     int ireg = 0, xreg = 0;
     int imax = 6, xmax = 8;
     for (int i = 0; i < vec_len(args); i++) {
-        Node *v = vec_get(args, i);
+        Node *v = (Node *)vec_get(args, i);
         if (v->ty->kind == KIND_STRUCT)
             vec_push(rest, v);
         else if (is_flotype(v->ty))
@@ -963,7 +966,7 @@ static int emit_args(Vector *vals) {
     SAVE;
     int r = 0;
     for (int i = 0; i < vec_len(vals); i++) {
-        Node *v = vec_get(vals, i);
+        Node *v = (Node *)vec_get(vals, i);
         if (v->ty->kind == KIND_STRUCT) {
             emit_addr(v);
             r += push_struct(v->ty->size);
@@ -1103,7 +1106,7 @@ static void emit_return(Node *node) {
 static void emit_compound_stmt(Node *node) {
     SAVE;
     for (int i = 0; i < vec_len(node->stmts); i++)
-        emit_expr(vec_get(node->stmts, i));
+        emit_expr((Node *)vec_get(node->stmts, i));
 }
 
 static void emit_logand(Node *node) {
@@ -1323,7 +1326,7 @@ static void emit_data_primtype(Type *ty, Node *val, int depth) {
         break;
     case KIND_LONG:
     case KIND_LLONG:
-    case KIND_PTR:
+    case KIND_PTR: {
         if (val->kind == OP_LABEL_ADDR) {
             emit(".quad %s", val->newlabel);
             break;
@@ -1349,6 +1352,7 @@ static void emit_data_primtype(Type *ty, Node *val, int depth) {
             emit(".quad %s+%u", base->glabel, v * ty->ptr->size);
         }
         break;
+    }
     default:
         error("don't know how to handle\n  <%s>\n  <%s>", ty2s(ty), node2s(val));
     }
@@ -1357,7 +1361,7 @@ static void emit_data_primtype(Type *ty, Node *val, int depth) {
 static void do_emit_data(Vector *inits, int size, int off, int depth) {
     SAVE;
     for (int i = 0; i < vec_len(inits) && 0 < size; i++) {
-        Node *node = vec_get(inits, i);
+        Node *node = (Node *)vec_get(inits, i);
         Node *v = node->initval;
         emit_padding(node, off);
         if (node->totype->bitsize > 0) {
@@ -1365,7 +1369,7 @@ static void do_emit_data(Vector *inits, int size, int off, int depth) {
             long data = eval_intexpr(v, NULL);
             Type *totype = node->totype;
             for (i++ ; i < vec_len(inits); i++) {
-                node = vec_get(inits, i);
+                node = (Node *)vec_get(inits, i);
                 if (node->totype->bitsize <= 0) {
                     break;
                 }
@@ -1373,7 +1377,11 @@ static void do_emit_data(Vector *inits, int size, int off, int depth) {
                 totype = node->totype;
                 data |= ((((long)1 << totype->bitsize) - 1) & eval_intexpr(v, NULL)) << totype->bitoff;
             }
-            emit_data_primtype(totype, &(Node){ AST_LITERAL, totype, .ival = data }, depth);
+            Node tmp = {};
+            tmp.kind = AST_LITERAL;
+            tmp.totype = totype;
+            tmp.ival = data;
+            emit_data_primtype(totype, &tmp, depth);
             off += totype->size;
             size -= totype->size;
             if (i == vec_len(inits))
@@ -1444,7 +1452,7 @@ static void push_func_params(Vector *params, int off) {
     int xreg = 0;
     int arg = 2;
     for (int i = 0; i < vec_len(params); i++) {
-        Node *v = vec_get(params, i);
+        Node *v = (Node *)vec_get(params, i);
         if (v->ty->kind == KIND_STRUCT) {
             emit("lea %d(#rbp), #rax", arg * 8);
             int size = push_struct(v->ty->size);
@@ -1497,7 +1505,7 @@ static void emit_func_prologue(Node *func) {
 
     int localarea = 0;
     for (int i = 0; i < vec_len(func->localvars); i++) {
-        Node *v = vec_get(func->localvars, i);
+        Node *v = (Node *)vec_get(func->localvars, i);
         int size = align(v->ty->size, 8);
         assert(size % 8 == 0);
         off -= size;
