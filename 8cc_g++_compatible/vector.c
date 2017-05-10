@@ -24,10 +24,10 @@ static int roundup(int n) {
 }
 
 static Vector *do_make_vector(int size) {
-    Vector *r = malloc(sizeof(Vector));
+    Vector *r = (Vector *)malloc(sizeof(Vector));
     size = roundup(size);
     if (size > 0)
-        r->body = malloc(sizeof(void *) * size);
+        r->body = (void **)malloc(sizeof(void *) * size);
     r->len = 0;
     r->nalloc = size;
     return r;
@@ -41,7 +41,7 @@ static void extend(Vector *vec, int delta) {
     if (vec->len + delta <= vec->nalloc)
         return;
     int nelem = max(roundup(vec->len + delta), MIN_SIZE);
-    void *newbody = malloc(sizeof(void *) * nelem);
+    void **newbody = (void **)malloc(sizeof(void *) * nelem);
     memcpy(newbody, vec->body, sizeof(void *) * vec->len);
     vec->body = newbody;
     vec->nalloc = nelem;
@@ -62,7 +62,7 @@ Vector *vec_copy(Vector *src) {
 
 void vec_push(Vector *vec, const void *elem) {
     extend(vec, 1);
-    vec->body[vec->len++] = elem;
+    vec->body[vec->len++] = (void *)elem;
 }
 
 void vec_append(Vector *a, Vector *b) {

@@ -27,10 +27,14 @@
 #include <string.h>
 #include "8cc.h"
 
-static Vector *buffers = &EMPTY_VECTOR;
-static Token *space_token = &(Token){ TSPACE };
-static Token *newline_token = &(Token){ TNEWLINE };
-static Token *eof_token = &(Token){ TEOF };
+//static Vector *buffers = &EMPTY_VECTOR;
+EMPTY_OBJECT(Vector, g_buffers, buffers);
+//static Token *space_token = &(Token){ TSPACE };
+EMPTY_OBJECT(Token, g_space_token, space_token);
+//static Token *newline_token = &(Token){ TNEWLINE };
+EMPTY_OBJECT(Token, g_newline_token, newline_token);
+//static Token *eof_token = &(Token){ TEOF };
+EMPTY_OBJECT(Token, g_eof_token, eof_token);
 
 typedef struct {
     int line;
@@ -71,7 +75,7 @@ static void mark() {
 }
 
 static Token *make_token(Token *tmpl) {
-    Token *r = malloc(sizeof(Token));
+    Token *r = (Token *)malloc(sizeof(Token));
     *r = *tmpl;
     r->hideset = NULL;
     File *f = current_file();
@@ -83,27 +87,47 @@ static Token *make_token(Token *tmpl) {
 }
 
 static Token *make_ident(char *p) {
-    return make_token(&(Token){ TIDENT, .sval = p });
+    Token tmp = {};
+    tmp.kind = TIDENT;
+    tmp.sval = p;
+    return make_token(&tmp);
 }
 
 static Token *make_strtok(char *s, int len, int enc) {
-    return make_token(&(Token){ TSTRING, .sval = s, .slen = len, .enc = enc });
+    Token tmp = {};
+    tmp.kind = TSTRING;
+    tmp.sval = s;
+    tmp.slen = len;
+    tmp.enc = enc;
+    return make_token(&tmp);
 }
 
 static Token *make_keyword(int id) {
-    return make_token(&(Token){ TKEYWORD, .id = id });
+    Token tmp = {};
+    tmp.kind = TKEYWORD;
+    tmp.id = id;
+    return make_token(&tmp);
 }
 
 static Token *make_number(char *s) {
-    return make_token(&(Token){ TNUMBER, .sval = s });
+    Token tmp = {};
+    tmp.kind = TNUMBER;
+    tmp.sval = s;
+    return make_token(&tmp);
 }
 
 static Token *make_invalid(char c) {
-    return make_token(&(Token){ TINVALID, .c = c });
+    Token tmp = {};
+    tmp.kind = TINVALID;
+    tmp.c = c;
+    return make_token(&tmp);
 }
 
 static Token *make_char(int c, int enc) {
-    return make_token(&(Token){ TCHAR, .c = c, .enc = enc });
+    Token tmp = {};
+    tmp.kind = TCHAR;
+    tmp.enc = enc;
+    return make_token(&tmp);
 }
 
 static bool iswhitespace(int c) {
@@ -514,7 +538,7 @@ static Token *do_read_token() {
 }
 
 static bool buffer_empty() {
-    return vec_len(buffers) == 1 && vec_len(vec_head(buffers)) == 0;
+    return vec_len(buffers) == 1 && vec_len((Vector *)vec_head(buffers)) == 0;
 }
 
 // Reads a header file name for #include.
@@ -575,7 +599,7 @@ void token_buffer_unstash() {
 void unget_token(Token *tok) {
     if (tok->kind == TEOF)
         return;
-    Vector *buf = vec_tail(buffers);
+    Vector *buf = (Vector *)vec_tail(buffers);
     vec_push(buf, tok);
 }
 
@@ -594,9 +618,9 @@ Token *lex_string(char *s) {
 }
 
 Token *lex() {
-    Vector *buf = vec_tail(buffers);
+    Vector *buf = (Vector *)vec_tail(buffers);
     if (vec_len(buf) > 0)
-        return vec_pop(buf);
+        return (Token *)vec_pop(buf);
     if (vec_len(buffers) > 1)
         return eof_token;
     bool bol = (current_file()->column == 1);
