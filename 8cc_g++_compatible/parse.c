@@ -391,7 +391,7 @@ static Node *ast_label(char *label) {
 }
 
 static Node *ast_dest(char *label) {
-    Node tmp = {AST_LITERAL};
+    Node tmp = {AST_LABEL};
     tmp.label = label;
     tmp.newlabel = label;
     return make_ast(&tmp);

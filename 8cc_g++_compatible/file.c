@@ -24,11 +24,13 @@
 #include <unistd.h>
 #include "8cc.h"
 
-static Vector *files = &EMPTY_VECTOR;
-static Vector *stashed = &EMPTY_VECTOR;
+//static Vector *files = &EMPTY_VECTOR;
+//static Vector *stashed = &EMPTY_VECTOR;
+EMPTY_OBJECT(Vector, g_files, files);
+EMPTY_OBJECT(Vector, g_stashed, stashed);
 
 File *make_file(FILE *file, char *name) {
-    File *r = calloc(1, sizeof(File));
+    File *r = (File *)calloc(1, sizeof(File));
     r->file = file;
     r->name = name;
     r->line = 1;
@@ -41,7 +43,7 @@ File *make_file(FILE *file, char *name) {
 }
 
 File *make_file_string(char *s) {
-    File *r = calloc(1, sizeof(File));
+    File *r = (File *)calloc(1, sizeof(File));
     r->line = 1;
     r->column = 1;
     r->p = s;
@@ -84,7 +86,7 @@ static int readc_string(File *f) {
 }
 
 static int get() {
-    File *f = vec_tail(files);
+    File *f = (File *)vec_tail(files);
     int c;
     if (f->buflen > 0) {
         c = f->buf[--f->buflen];
@@ -108,7 +110,7 @@ int readc() {
         if (c == EOF) {
             if (vec_len(files) == 1)
                 return c;
-            close_file(vec_pop(files));
+            close_file((File *)vec_pop(files));
             continue;
         }
         if (c != '\\')
@@ -124,7 +126,7 @@ int readc() {
 void unreadc(int c) {
     if (c == EOF)
         return;
-    File *f = vec_tail(files);
+    File *f = (File *)vec_tail(files);
     assert(f->buflen < sizeof(f->buf) / sizeof(f->buf[0]));
     f->buf[f->buflen++] = c;
     if (c == '\n') {
@@ -136,7 +138,7 @@ void unreadc(int c) {
 }
 
 File *current_file() {
-    return vec_tail(files);
+    return (File *)vec_tail(files);
 }
 
 void stream_push(File *f) {
@@ -150,7 +152,7 @@ int stream_depth() {
 char *input_position() {
     if (vec_len(files) == 0)
         return "(unknown)";
-    File *f = vec_tail(files);
+    File *f = (File *)vec_tail(files);
     return format("%s:%d:%d", f->name, f->line, f->column);
 }
 
@@ -160,5 +162,5 @@ void stream_stash(File *f) {
 }
 
 void stream_unstash() {
-    files = vec_pop(stashed);
+    files = (Vector *)vec_pop(stashed);
 }

@@ -8,6 +8,11 @@
 #include <unistd.h>
 #include "8cc.h"
 
+////////////////////////////////
+// linker issues
+////////////////////////////////
+void *__gxx_personality_v0;
+
 bool dumpstack = false;
 bool dumpsource = true;
 
@@ -1379,7 +1384,7 @@ static void do_emit_data(Vector *inits, int size, int off, int depth) {
             }
             Node tmp = {};
             tmp.kind = AST_LITERAL;
-            tmp.totype = totype;
+            tmp.ty = totype;
             tmp.ival = data;
             emit_data_primtype(totype, &tmp, depth);
             off += totype->size;

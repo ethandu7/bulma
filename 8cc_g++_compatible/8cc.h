@@ -297,6 +297,10 @@ extern Type *type_ldouble;
 #define EMPTY_OBJECT(type, g_name, name) static type g_name = {}; \
                                             static type *name = &g_name;
 
+#define TOKEN_OBJECT(type, g_name, name, kind) \
+    static type g_name = { kind }; \
+    static type *name = &g_name;
+
 #define DEFINE_OBJECT(type, g_name, name, kind, size, align, usig) \
     type g_name = { kind, size, align, usig }; \
     type *name = &g_name;

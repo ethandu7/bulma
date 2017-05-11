@@ -32,6 +32,7 @@ static void test_for() {
     int i;
     int acc = 0;
     __builtin_return_address(0);
+    #include "ethandu.h"
     for (i = 0; i < 5; i++) {
         acc = acc + i;
     }

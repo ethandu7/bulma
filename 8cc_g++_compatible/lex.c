@@ -30,11 +30,11 @@
 //static Vector *buffers = &EMPTY_VECTOR;
 EMPTY_OBJECT(Vector, g_buffers, buffers);
 //static Token *space_token = &(Token){ TSPACE };
-EMPTY_OBJECT(Token, g_space_token, space_token);
+TOKEN_OBJECT(Token, g_space_token, space_token, TSPACE);
 //static Token *newline_token = &(Token){ TNEWLINE };
-EMPTY_OBJECT(Token, g_newline_token, newline_token);
+TOKEN_OBJECT(Token, g_newline_token, newline_token, TNEWLINE);
 //static Token *eof_token = &(Token){ TEOF };
-EMPTY_OBJECT(Token, g_eof_token, eof_token);
+TOKEN_OBJECT(Token, g_eof_token, eof_token, TEOF);
 
 typedef struct {
     int line;

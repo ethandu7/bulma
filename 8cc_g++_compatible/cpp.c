@@ -33,8 +33,12 @@ EMPTY_OBJECT(Map, g_include_guard, include_guard);
 EMPTY_OBJECT(Vector, g_cond_incl_stack, cond_incl_stack);
 EMPTY_OBJECT(Vector, g_std_include_path, std_include_path);
 static struct tm now;
-EMPTY_OBJECT(Token, g_cpp_token_zero, cpp_token_zero);
-EMPTY_OBJECT(Token, g_cpp_token_one, cpp_token_one);
+static Token g_cpp_token_zero = {TNUMBER};
+static char str0[] = "0";
+static Token *cpp_token_zero = &g_cpp_token_zero;
+static Token g_cpp_token_one = {TNUMBER};
+static char str1[] = "1";
+static Token *cpp_token_one = &g_cpp_token_one;
 
 
 typedef void SpecialMacroHandler(Token *tok);
@@ -994,6 +998,8 @@ void init_now() {
 
 void cpp_init() {
     setlocale(LC_ALL, "C");
+    g_cpp_token_zero.sval = str0;    
+    g_cpp_token_one.sval = str1;
     init_keywords();
     init_now();
     init_predefined_macros();
